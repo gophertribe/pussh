@@ -86,6 +86,12 @@ func NewRunner(opts RunnerOptions) *Runner {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	if opts.Stdout == nil {
+		opts.Stdout = os.Stdout
+	}
+	if opts.Stderr == nil {
+		opts.Stderr = os.Stderr
+	}
 	return &Runner{
 		opts: opts,
 		log:  logger,
