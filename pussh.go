@@ -48,6 +48,9 @@ type RunnerOptions struct {
 	// If empty, defaults to ghcr.io/psviderski/unregistry:latest.
 	UnregistryImage string
 
+	// ForceImageTransfer forces transfer of unregistry image even if it exists on remote.
+	ForceImageTransfer bool
+
 	// Stdout and Stderr are used for streaming docker command output.
 	// If nil, output is discarded. The CLI sets these to os.Stdout/os.Stderr.
 	Stdout io.Writer
@@ -257,15 +260,21 @@ func (r *Runner) checkRemoteDocker(ctx context.Context) error {
 func (r *Runner) runUnregistry(ctx context.Context) error {
 	image := r.unregistryImage()
 
-	// Ensure image exists on remote, or transfer
-	if err := r.ssh.Run(ctx, r.dockerCmd(fmt.Sprintf("image inspect %s >/dev/null 2>&1", shellQuote(image)))); err != nil {
+	needsTransfer := r.opts.ForceImageTransfer
+	if !needsTransfer {
+		if err := r.ssh.Run(ctx, r.dockerCmd(fmt.Sprintf("image inspect %s >/dev/null 2>&1", shellQuote(image)))); err != nil {
+			needsTransfer = true
+		}
+	}
+
+	if needsTransfer {
 		switch r.opts.ImageTransferMode {
 		case "scp":
+			r.log.Info("transferring unregistry image to remote host", "image", image, "forced", r.opts.ForceImageTransfer)
 			if err := r.transferUnregistryImage(ctx); err != nil {
 				return fmt.Errorf("transfer unregistry image: %w", err)
 			}
 		default:
-			// remote pull
 			r.log.Info("pulling unregistry image on remote host", "image", image)
 			if err := r.ssh.RunStreaming(ctx, r.dockerCmd(fmt.Sprintf("pull %s", shellQuote(image))), r.stdout(), r.stderr()); err != nil {
 				return fmt.Errorf("pull unregistry image on remote: %w", err)

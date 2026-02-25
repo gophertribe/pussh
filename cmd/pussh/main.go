@@ -58,12 +58,15 @@ Options:
                           'copy': Pull unregistry image locally and transfer via SSH stream (for air-gapped environments).
                           With --platform, pulls and transfers only the target platform variant.
                           Only used if unregistry image is not already available on remote host.
+      --force-image-transfer         Force transfer of unregistry image even if it exists on remote host.
+                          Useful when the existing image is outdated or corrupted.
 
 Examples:
   docker pussh myimage:latest user@host
   docker pussh --platform linux/amd64 myimage:latest host
   docker pussh myimage:latest user@host:2222 -i ~/.ssh/id_ed25519
   docker pussh --image-transfer-mode copy myimage:latest user@host
+  docker pussh --force-image-transfer --image-transfer-mode copy myimage:latest user@host
   # Cross-platform: build for target platform first
   docker build --platform linux/amd64 -t myimage:latest .
   docker pussh --platform linux/amd64 myimage:latest user@host
@@ -82,11 +85,12 @@ func main() {
 	}
 
 	var (
-		sshKey   string
-		platform string
-		transfer string = "remote"
-		showVer  bool
-		verbose  bool
+		sshKey             string
+		platform           string
+		transfer           string = "remote"
+		forceImageTransfer bool
+		showVer            bool
+		verbose            bool
 	)
 
 	rootCmd := &cobra.Command{
@@ -114,14 +118,15 @@ func main() {
 			logger := slog.New(newColorHandler(os.Stdout, level))
 
 			opts := pussh.RunnerOptions{
-				Image:             image,
-				SSHAddress:        sshAddr,
-				SSHKeyPath:        sshKey,
-				Platform:          platform,
-				ImageTransferMode: transfer,
-				Logger:            logger,
-				Stdout:            os.Stdout,
-				Stderr:            os.Stderr,
+				Image:              image,
+				SSHAddress:         sshAddr,
+				SSHKeyPath:         sshKey,
+				Platform:           platform,
+				ImageTransferMode:  transfer,
+				ForceImageTransfer: forceImageTransfer,
+				Logger:             logger,
+				Stdout:             os.Stdout,
+				Stderr:             os.Stderr,
 			}
 
 			if err := pussh.Execute(context.Background(), opts); err != nil {
@@ -141,6 +146,7 @@ func main() {
 	rootCmd.Flags().StringVarP(&sshKey, "ssh-key", "i", "", "Path to SSH private key for remote login")
 	rootCmd.Flags().StringVar(&platform, "platform", "", "Target platform (e.g., linux/amd64)")
 	rootCmd.Flags().StringVar(&transfer, "image-transfer-mode", transfer, "Image transfer mode: remote|copy")
+	rootCmd.Flags().BoolVar(&forceImageTransfer, "force-image-transfer", false, "Force transfer of unregistry image even if it exists on remote")
 
 	// Custom help output to match bash script
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) { fmt.Println(usageMessage) })
