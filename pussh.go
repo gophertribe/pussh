@@ -131,6 +131,12 @@ func (r *Runner) Run(ctx context.Context) error {
 	r.log.Info("port forwarded",
 		"local_port", localPort, "remote_port", r.unregistryPort)
 
+	r.log.Debug("waiting for registry to be ready", "port", localPort)
+	if err := waitForRegistry(ctx, localPort); err != nil {
+		return fmt.Errorf("registry not ready: %w", err)
+	}
+	r.log.Debug("registry is ready", "port", localPort)
+
 	pushPort := localPort
 
 	// Docker Desktop handling
@@ -146,6 +152,12 @@ func (r *Runner) Run(ctx context.Context) error {
 		pushPort = p
 		r.log.Info("Docker Desktop tunnel created",
 			"tunnel_port", pushPort, "host_port", localPort)
+
+		r.log.Debug("waiting for registry tunnel to be ready", "port", pushPort)
+		if err := waitForRegistry(ctx, pushPort); err != nil {
+			return fmt.Errorf("registry tunnel not ready: %w", err)
+		}
+		r.log.Debug("registry tunnel is ready", "port", pushPort)
 	}
 
 	// Tag and push
