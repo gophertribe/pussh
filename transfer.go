@@ -8,6 +8,9 @@ import (
 	"os/exec"
 )
 
+const TransferModeRemote = "remote"
+const TransferModeSCP = "scp"
+
 // transferUnregistryImage transfers the unregistry image to the remote host via SSH pipe.
 // This is used in "copy" (air-gapped) mode: docker save | ssh docker load.
 func (r *Runner) transferUnregistryImage(ctx context.Context) error {

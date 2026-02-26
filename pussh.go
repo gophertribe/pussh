@@ -275,7 +275,7 @@ func (r *Runner) runUnregistry(ctx context.Context) error {
 
 	if needsTransfer {
 		switch r.opts.ImageTransferMode {
-		case "scp":
+		case TransferModeSCP:
 			r.log.Info("transferring unregistry image to remote host", "image", image, "forced", r.opts.ForceImageTransfer)
 			if err := r.transferUnregistryImage(ctx); err != nil {
 				return fmt.Errorf("transfer unregistry image: %w", err)
